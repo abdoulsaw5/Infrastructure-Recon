@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infra Recon — Shodan · Censys · ZoomEye · FOFA</title>
+<!--
+  ===========================================================================
+  INFRASTRUCTURE SEARCH ENGINE DORK GENERATOR - visual identity v2
+  ===========================================================================
+
+-->
+<style>
+  :root {
+    --void:   #0b0f14;
+    --panel:  #121822;
+    --line:   rgba(87, 217, 199, 0.14);
+    --amber:  #ffb200;
+    --cyan:   #57d9c7;
+    --alert:  #ff7a59;
+    --text:   #e8ebee;
+    --muted:  #6b7686;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    max-width: 860px; margin: 0 auto;
+    background:
+      repeating-linear-gradient(180deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 3px),
+      var(--void);
+    color: var(--text);
+    padding: 0 20px 60px;
+    line-height: 1.6;
+  }
+
+  /* ---------- header / radar sweep ---------- */
+  .header {
+    position: relative;
+    padding: 56px 0 36px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 8px;
+  }
+  .sweep-wrap {
+    position: absolute; top: 44px; right: 0;
+    width: 110px; height: 110px;
+    opacity: 0.9;
+  }
+  .sweep-ring {
+    position: absolute; inset: 0;
+    border: 1px solid rgba(87, 217, 199, 0.25);
+    border-radius: 50%;
+  }
+  .sweep-ring.inner { inset: 22px; border-color: rgba(87, 217, 199, 0.18); }
+  .sweep-arm {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, rgba(255,178,0,0.85) 0deg, rgba(255,178,0,0) 55deg);
+    animation: rotate 4s linear infinite;
+  }
+  @keyframes rotate { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    .sweep-arm { animation: none; }
+  }
+
+  h1 {
+    font-size: 2em; font-weight: 600; margin: 0 0 10px;
+    letter-spacing: -0.01em; max-width: 480px;
+  }
+  .sub {
+    color: var(--muted); font-size: 0.98em; max-width: 460px; margin: 0;
+  }
+  .engine-row {
+    display: flex; gap: 18px; margin-top: 22px; flex-wrap: wrap;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.82em; color: var(--cyan);
+  }
+  .engine-row span::before { content: "◆ "; color: var(--amber); }
+
+  /* ---------- search input ---------- */
+  .search-container { margin: 34px 0 10px; }
+  label {
+    display: block; font-size: 0.92em; margin-bottom: 10px; color: var(--muted);
+  }
+  input {
+    width: 100%; font-size: 1.05em; padding: 13px 16px;
+    border: 1px solid var(--line); border-radius: 3px;
+    background: var(--panel); color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    transition: border-color 0.2s ease;
+  }
+  input:focus { outline: none; border-color: var(--amber); }
+  .hint { color: var(--muted); font-size: 0.8em; margin-top: 8px; }
+
+  /* ---------- dork list ---------- */
+  #dorkList { list-style: none; margin: 30px 0; padding: 0; }
+  li {
+    padding: 20px 0; border-bottom: 1px solid var(--line);
+  }
+  .dork-head {
+    display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .dork-title { font-size: 1.02em; font-weight: 500; }
+  .confidence {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.74em;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .confidence.verified { color: var(--cyan); }
+  .confidence.best-effort { color: var(--alert); }
+  .confidence::before { content: "●"; font-size: 0.7em; }
+  .confidence.best-effort::before { content: "▲"; }
+
+  .dork-note {
+    color: var(--muted); font-size: 0.82em; margin: 0 0 10px; max-width: 620px;
+  }
+  .dork-text {
+    display: block; color: var(--amber);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.88em;
+    margin-bottom: 12px; word-break: break-word;
+  }
+  .dork-text::before { content: "> "; color: var(--muted); }
+
+  .engines { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+  .engines a {
+    text-decoration: none; color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.8em;
+    padding: 2px 0; border-bottom: 1px solid transparent;
+    transition: color 0.15s ease, border-color 0.15s ease;
+  }
+  .engines a::before { content: "→ "; opacity: 0.55; }
+  .engines a:hover { color: var(--cyan); border-color: var(--cyan); }
+
+  .note {
+    border: 1px solid var(--line); border-radius: 3px;
+    padding: 16px 18px; color: var(--muted); font-size: 0.84em; margin-top: 40px;
+    background: var(--panel);
+  }
+  .note strong { color: var(--text); font-weight: 500; }
+
+  @media (max-width: 640px) {
+    .sweep-wrap { display: none; }
+    body { padding: 0 16px 40px; }
+  }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <div class="header">
+    <div class="sweep-wrap">
+      <div class="sweep-ring"></div>
+      <div class="sweep-ring inner"></div>
+      <div class="sweep-arm"></div>
+    </div>
+    <h1>Infra Recon</h1>
+    <p class="sub">Dork queries for the engines that crawl banners and open ports, subdomains, exposed databases, and misconfigured services actually surface.</p>
+    <div class="engine-row">
+      <span>Shodan</span><span>Censys</span><span>ZoomEye</span><span>FOFA</span>
+    </div>
+  </div>
+
+  <div class="search-container">
+    <label for="domainInput">Target domain or org name</label>
+    <input type="text" id="domainInput" placeholder="example.com" oninput="render()">
+    <div class="hint">Used in each engine's org / domain / cert fields no comma-list support, since these query infrastructure, not a shared page index.</div>
+  </div>
+
+  <ul id="dorkList"></ul>
+
+  <div class="note">
+    <strong>Reading the tags:</strong> ● verified means the field name and syntax were checked against each engine's
+    current docs. ▲ best-effort means the query relies on that engine's internal fingerprint/app-name database for a
+    specific product these aren't fully stable or documented, so if a query returns nothing, check the exact string
+    against that engine's own search-bar autocomplete.
+  </div>
+
+<script>
+  // =========================================================================
+  // 1. ENGINE DEFINITIONS
+  // =========================================================================
+  function toBase64(str) {
+    return btoa(unescape(encodeURIComponent(str)));
+  }
+
+  const ENGINES = [
+    { name: "Shodan",   buildUrl: q => "https://www.shodan.io/search?query=" + encodeURIComponent(q) },
+    { name: "Censys",   buildUrl: q => "https://search.censys.io/search?resource=hosts&q=" + encodeURIComponent(q) },
+    { name: "ZoomEye",  buildUrl: q => "https://www.zoomeye.org/searchResult?q=" + encodeURIComponent(q) },
+    { name: "FOFA",     buildUrl: q => "https://fofa.info/result?qbase64=" + toBase64(q) },
+  ];
+
+    const DORKS = [
+    {
+      title: "Cert-based subdomain discovery",
+      confidence: "verified",
+      note: "Reads real issued certificate data rather than a search-index, often more complete than DNS wordlist tools for subdomains that have a cert but aren't in public zone files.",
+      templates: {
+        Shodan:   t => `ssl.cert.subject.cn:"*.${t}"`,
+        Censys:   t => `host.services.cert.names: "${t}"`,
+        ZoomEye:  t => `ssl.cert.subject.cn:"${t}"`,
+        FOFA:     t => `cert="${t}"`,
+      },
+    },
+    {
+      title: "Organization-based asset discovery",
+      confidence: "verified",
+      note: "Only as good as how the org registered their ASN/WHOIS info sometimes returns the ISP instead of the company for smaller orgs.",
+      templates: {
+        Shodan:   t => `org:"${t}"`,
+        Censys:   t => `host.autonomous_system.name: "${t}"`,
+        ZoomEye:  t => `org:"${t}"`,
+        FOFA:     t => `org="${t}"`,
+      },
+    },
+    {
+      title: "Hostname / domain match",
+      confidence: "verified",
+      templates: {
+        Shodan:   t => `hostname:"${t}"`,
+        Censys:   t => `host.services.cert.names: "${t}" or host.dns.reverse_dns.names: "${t}"`,
+        ZoomEye:  t => `hostname:"${t}"`,
+        FOFA:     t => `domain="${t}"`,
+      },
+    },
+    {
+      title: "Exposed admin/login panels (by page title)",
+      confidence: "verified",
+      note: "Broad on purpose pair with the org/hostname dorks above to scope it further.",
+      templates: {
+        Shodan:   t => `org:"${t}" http.title:"admin"`,
+        Censys:   t => `host.autonomous_system.name: "${t}" and host.services.http.response.html_title: "admin"`,
+        ZoomEye:  t => `app:"${t}" title:"admin"`,
+        FOFA:     t => `org="${t}" && title="admin"`,
+      },
+    },
+    {
+      title: "Directory listing exposure",
+      confidence: "verified",
+      templates: {
+        Shodan:   t => `org:"${t}" http.title:"Index of /"`,
+        Censys:   t => `host.autonomous_system.name: "${t}" and host.services.http.response.html_title: "Index of /"`,
+        ZoomEye:  t => `app:"${t}" title:"Index of /"`,
+        FOFA:     t => `org="${t}" && title="Index of /"`,
+      },
+    },
+    {
+      title: "Exposed MongoDB",
+      confidence: "best effort",
+      note: "Product/app fingerprint names drift between engines verify the exact string via that engine's own search-bar suggestions if this comes back empty.",
+      templates: {
+        Shodan:   t => `org:"${t}" product:"MongoDB"`,
+        Censys:   t => `host.autonomous_system.name: "${t}" and host.services.software.product: "MongoDB"`,
+        ZoomEye:  t => `app:"MongoDB" org:"${t}"`,
+        FOFA:     t => `org="${t}" && app="MONGODB-MongoDB"`,
+      },
+    },
+    {
+      title: "Exposed Elasticsearch",
+      confidence: "best-effort",
+      templates: {
+        Shodan:   t => `org:"${t}" product:"Elasticsearch"`,
+        Censys:   t => `host.autonomous_system.name: "${t}" and host.services.software.product: "Elasticsearch"`,
+        ZoomEye:  t => `app:"Elasticsearch" org:"${t}"`,
+        FOFA:     t => `org="${t}" && app="ELASTIC-Elasticsearch"`,
+      },
+    },
+    {
+      title: "Exposed Redis",
+      confidence: "best-effort",
+      templates: {
+        Shodan:   t => `org:"${t}" product:"Redis"`,
+        Censys:   t => `host.autonomous_system.name: "${t}" and host.services.software.product: "Redis"`,
+        ZoomEye:  t => `app:"Redis" org:"${t}"`,
+        FOFA:     t => `org="${t}" && app="REDIS-Redis"`,
+      },
+    },
+    {
+      title: "Exposed Jenkins",
+      confidence: "best-effort",
+      templates: {
+        Shodan:   t => `org:"${t}" product:"Jenkins"`,
+        Censys:   t => `host.autonomous_system.name: "${t}" and host.services.software.product: "Jenkins"`,
+        ZoomEye:  t => `app:"Jenkins" org:"${t}"`,
+        FOFA:     t => `org="${t}" && app="JENKINS"`,
+      },
+    },
+    {
+      title: "Exposed Kibana / Grafana dashboards",
+      confidence: "best-effort",
+      templates: {
+        Shodan:   t => `org:"${t}" (product:"Kibana" or product:"Grafana")`,
+        Censys:   t => `host.autonomous_system.name: "${t}" and (host.services.software.product: "Kibana" or host.services.software.product: "Grafana")`,
+        ZoomEye:  t => `org:"${t}" (app:"Kibana" or app:"Grafana")`,
+        FOFA:     t => `org="${t}" && (app="KIBANA" || app="GRAFANA")`,
+      },
+    },
+    {
+      title: "Exposed Docker API",
+      confidence: "best-effort",
+      templates: {
+        Shodan:   t => `org:"${t}" product:"Docker"`,
+        Censys:   t => `host.autonomous_system.name: "${t}" and host.services.software.product: "Docker"`,
+        ZoomEye:  t => `app:"Docker" org:"${t}"`,
+        FOFA:     t => `org="${t}" && app="Docker-API"`,
+      },
+    },
+    {
+      title: "Exposed Kubernetes dashboard/API",
+      confidence: "best-effort",
+      templates: {
+        Shodan:   t => `org:"${t}" product:"Kubernetes"`,
+        Censys:   t => `host.autonomous_system.name: "${t}" and host.services.software.product: "Kubernetes"`,
+        ZoomEye:  t => `app:"Kubernetes" org:"${t}"`,
+        FOFA:     t => `org="${t}" && app="Kubernetes"`,
+      },
+    },
+    {
+      title: "Exposed FTP with anonymous login banner",
+      confidence: "best-effort",
+      templates: {
+        Shodan:   t => `org:"${t}" port:21 "230 Login successful"`,
+        Censys:   t => `host.autonomous_system.name: "${t}" and host.services.port: 21 and host.services.banner: "230 Login successful"`,
+        ZoomEye:  t => `org:"${t}" port:21 banner:"230 Login successful"`,
+        FOFA:     t => `org="${t}" && port="21" && banner="230 Login successful"`,
+      },
+    },
+    {
+      title: "Exposed RDP",
+      confidence: "verified",
+      templates: {
+        Shodan:   t => `org:"${t}" port:3389`,
+        Censys:   t => `host.autonomous_system.name: "${t}" and host.services.port: 3389`,
+        ZoomEye:  t => `org:"${t}" port:3389`,
+        FOFA:     t => `org="${t}" && port="3389"`,
+      },
+    },
+    {
+      title: "Exposed VNC",
+      confidence: "verified",
+      templates: {
+        Shodan:   t => `org:"${t}" port:5900`,
+        Censys:   t => `host.autonomous_system.name: "${t}" and host.services.port: 5900`,
+        ZoomEye:  t => `org:"${t}" port:5900`,
+        FOFA:     t => `org="${t}" && port="5900"`,
+      },
+    },
+    {
+      title: "Country-scoped org search",
+      confidence: "verified",
+      note: "Swap 'US' for whatever's relevant to your target before using this one.",
+      templates: {
+        Shodan:   t => `org:"${t}" country:"US"`,
+        Censys:   t => `host.autonomous_system.name: "${t}" and host.location.country_code: "US"`,
+        ZoomEye:  t => `org:"${t}" country:"United States"`,
+        FOFA:     t => `org="${t}" && country="US"`,
+      },
+    },
+    {
+      title: "Exposed Jupyter Notebooks",
+      confidence: "best-effort",
+      templates: {
+        Shodan:   t => `org:"${t}" product:"Jupyter"`,
+        Censys:   t => `host.autonomous_system.name: "${t}" and host.services.software.product: "Jupyter"`,
+        ZoomEye:  t => `app:"Jupyter" org:"${t}"`,
+        FOFA:     t => `org="${t}" && app="JUPYTER-Notebook"`,
+      },
+    },
+  ];
+
+  // =========================================================================
+  // 3. RENDER
+  // =========================================================================
+  function makeDorkItem(item) {
+    const target = document.getElementById("domainInput").value.trim();
+    const t = target || "example.com";
+
+    const li = document.createElement("li");
+
+    const head = document.createElement("div");
+    head.className = "dork-head";
+    const title = document.createElement("span");
+    title.className = "dork-title";
+    title.textContent = item.title;
+    head.appendChild(title);
+    const badge = document.createElement("span");
+    badge.className = "confidence " + item.confidence;
+    badge.textContent = item.confidence;
+    head.appendChild(badge);
+    li.appendChild(head);
+
+    if (item.note) {
+      const note = document.createElement("div");
+      note.className = "dork-note";
+      note.textContent = item.note;
+      li.appendChild(note);
+    }
+
+    // Show the query as it'll run on the first engine listed, purely as a
+    // representative preview line above the per-engine links.
+    const previewFn = item.templates[ENGINES[0].name];
+    if (previewFn) {
+      const text = document.createElement("span");
+      text.className = "dork-text";
+      text.textContent = previewFn(t);
+      li.appendChild(text);
+    }
+
+    const row = document.createElement("div");
+    row.className = "engines";
+    for (const engine of ENGINES) {
+      const templateFn = item.templates[engine.name];
+      if (!templateFn) continue;
+      const q = templateFn(t);
+
+      const a = document.createElement("a");
+      a.textContent = engine.name;
+      a.href = engine.buildUrl(q);
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.title = q;
+      row.appendChild(a);
+    }
+    li.appendChild(row);
+    return li;
+  }
+
+  function render() {
+    const list = document.getElementById("dorkList");
+    list.innerHTML = "";
+    for (const item of DORKS) list.appendChild(makeDorkItem(item));
+  }
+
+  render();
+</script>
+</body>
+</html>
