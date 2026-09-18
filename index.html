@@ -3,12 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Infra Recon — Shodan · Censys · ZoomEye · FOFA</title>
+<title>Infra Recon: Shodan, Censys, ZoomEye, FOFA</title>
 <!--
   ===========================================================================
   INFRASTRUCTURE SEARCH ENGINE DORK GENERATOR - visual identity v2
   ===========================================================================
-
 -->
 <style>
   :root {
@@ -153,7 +152,7 @@
       <div class="sweep-arm"></div>
     </div>
     <h1>Infra Recon</h1>
-    <p class="sub">Dork queries for the engines that crawl banners and open ports, subdomains, exposed databases, and misconfigured services actually surface.</p>
+    <p class="sub">Dork queries for the engines that crawl banners and open ports, not pages. This is where subdomains, exposed databases, and misconfigured services actually surface.</p>
     <div class="engine-row">
       <span>Shodan</span><span>Censys</span><span>ZoomEye</span><span>FOFA</span>
     </div>
@@ -162,7 +161,7 @@
   <div class="search-container">
     <label for="domainInput">Target domain or org name</label>
     <input type="text" id="domainInput" placeholder="example.com" oninput="render()">
-    <div class="hint">Used in each engine's org / domain / cert fields no comma-list support, since these query infrastructure, not a shared page index.</div>
+    <div class="hint">Used as-is in each engine's org / domain / cert fields. No comma-list support, since these query infrastructure, not a shared page index.</div>
   </div>
 
   <ul id="dorkList"></ul>
@@ -170,7 +169,7 @@
   <div class="note">
     <strong>Reading the tags:</strong> ● verified means the field name and syntax were checked against each engine's
     current docs. ▲ best-effort means the query relies on that engine's internal fingerprint/app-name database for a
-    specific product these aren't fully stable or documented, so if a query returns nothing, check the exact string
+    specific product. These aren't fully stable or documented, so if a query returns nothing, check the exact string
     against that engine's own search-bar autocomplete.
   </div>
 
@@ -184,7 +183,7 @@
 
   const ENGINES = [
     { name: "Shodan",   buildUrl: q => "https://www.shodan.io/search?query=" + encodeURIComponent(q) },
-    { name: "Censys",   buildUrl: q => "https://search.censys.io/search?resource=hosts&q=" + encodeURIComponent(q) },
+    { name: "Censys",   buildUrl: q => "https://platform.censys.io/search?q=" + encodeURIComponent(q) }, // search.censys.io was retired in favor of the Censys Platform
     { name: "ZoomEye",  buildUrl: q => "https://www.zoomeye.org/searchResult?q=" + encodeURIComponent(q) },
     { name: "FOFA",     buildUrl: q => "https://fofa.info/result?qbase64=" + toBase64(q) },
   ];
@@ -193,7 +192,7 @@
     {
       title: "Cert-based subdomain discovery",
       confidence: "verified",
-      note: "Reads real issued certificate data rather than a search-index, often more complete than DNS wordlist tools for subdomains that have a cert but aren't in public zone files.",
+      note: "Reads real issued certificate data rather than a search-index guess. Often more complete than DNS wordlist tools for subdomains that have a cert but aren't in public zone files.",
       templates: {
         Shodan:   t => `ssl.cert.subject.cn:"*.${t}"`,
         Censys:   t => `host.services.cert.names: "${t}"`,
@@ -204,7 +203,7 @@
     {
       title: "Organization-based asset discovery",
       confidence: "verified",
-      note: "Only as good as how the org registered their ASN/WHOIS info sometimes returns the ISP instead of the company for smaller orgs.",
+      note: "Only as good as how the org registered their ASN/WHOIS info. Sometimes returns the ISP instead of the company for smaller orgs.",
       templates: {
         Shodan:   t => `org:"${t}"`,
         Censys:   t => `host.autonomous_system.name: "${t}"`,
@@ -225,7 +224,7 @@
     {
       title: "Exposed admin/login panels (by page title)",
       confidence: "verified",
-      note: "Broad on purpose pair with the org/hostname dorks above to scope it further.",
+      note: "Broad on purpose, pair with the org/hostname dorks above to scope it further.",
       templates: {
         Shodan:   t => `org:"${t}" http.title:"admin"`,
         Censys:   t => `host.autonomous_system.name: "${t}" and host.services.http.response.html_title: "admin"`,
@@ -245,8 +244,8 @@
     },
     {
       title: "Exposed MongoDB",
-      confidence: "best effort",
-      note: "Product/app fingerprint names drift between engines verify the exact string via that engine's own search-bar suggestions if this comes back empty.",
+      confidence: "best-effort",
+      note: "Product/app fingerprint names drift between engines. Verify the exact string via that engine's own search-bar suggestions if this comes back empty.",
       templates: {
         Shodan:   t => `org:"${t}" product:"MongoDB"`,
         Censys:   t => `host.autonomous_system.name: "${t}" and host.services.software.product: "MongoDB"`,
